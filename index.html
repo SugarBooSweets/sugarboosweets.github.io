@@ -94,6 +94,13 @@ $("#add").onclick=function(){tab=="p"?formP():formO()};
 $("#ov").onclick=function(e){if(e.target.id=="ov")close()};
 var tt;function toast(m){var t=$("#tst");t.textContent=m;t.style.display="block";clearTimeout(tt);tt=setTimeout(function(){t.style.display="none"},2600)}
 function ask(msg,yes){open('<div class="b" style="margin-bottom:12px">'+msg+'</div><div class="g2"><button class="btn" id="ay" style="background:#c0392b">أيوه، احذف</button><button class="btn s" id="an">لأ</button></div>');$("#an").onclick=close;$("#ay").onclick=function(){close();yes()}}
+function collect(o){return n(o.total)+n(o.delivery_fee)-n(o.paid)}
+function dlMsg(o){var no="SB-"+String(o.no||0).padStart(3,"0");
+ return["🚚 أوردر توصيل | SUGAR BOO","رقم الأوردر: "+no,"الزبون: "+(o.customer||""),"التليفون: "+(o.phone||""),"العنوان: "+(o.address||""),"الطلب: "+(o.items||""),"معاد التسليم: "+(o.date||"")+" "+(o.time||""),"المطلوب تحصيله: "+collect(o)+" ج",o.notes?"ملاحظات: "+o.notes:""].filter(function(x){return x}).join("\n")}
+function dlSheet(o){var cp=String(o.courier_phone||"").trim();if(!cp){toast("اكتب تليفون الديلفري من تعديل الأوردر");return}
+ var m=dlMsg(o);
+ open('<div class="b">رسالة الديلفري'+(o.courier_name?' ('+esc(o.courier_name)+')':'')+'</div><pre style="white-space:pre-wrap;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;font:14px Cairo;margin:10px 0;user-select:all">'+esc(m)+'</pre><div class="g2"><a class="btn" style="text-align:center;text-decoration:none;color:#fff;background:#25a244" href="'+wa(cp)+'?text='+encodeURIComponent(m)+'" target="_blank" rel="noopener">ابعت واتساب</a><button class="btn s" id="cpm">نسخ الرسالة</button></div><button class="btn s" id="an" style="width:100%;margin-top:8px">إغلاق</button>');
+ $("#an").onclick=close;$("#cpm").onclick=function(){try{navigator.clipboard.writeText(m).then(function(){toast("اتنسخت")},function(){toast("امسك الرسالة واعمل نسخ")})}catch(e){toast("امسك الرسالة واعمل نسخ")}}}
 function callSheet(o){var ph=String(o.phone||"").trim();if(!ph){toast("مفيش رقم تليفون");return}
 open('<div class="b">'+esc(o.customer)+'</div><div style="font-size:24px;font-weight:800;direction:ltr;text-align:center;margin:12px 0;user-select:all">'+esc(ph)+'</div><div class="g2"><a class="btn" style="text-align:center;text-decoration:none;color:#fff" href="tel:'+esc(ph.replace(/[^\d+]/g,""))+'" target="_top">اتصال</a><a class="btn" style="text-align:center;text-decoration:none;color:#fff;background:#25a244" href="'+wa(ph)+'" target="_blank" rel="noopener">واتساب</a></div><button class="btn s" id="cp" style="width:100%;margin-top:8px">نسخ الرقم</button><button class="btn s" id="an" style="width:100%;margin-top:8px">إغلاق</button>');
 $("#an").onclick=close;$("#cp").onclick=function(){try{navigator.clipboard.writeText(ph).then(function(){toast("اتنسخ")},function(){toast("امسك الرقم واعمل نسخ")})}catch(e){toast("امسك الرقم واعمل نسخ")}}}
@@ -114,9 +121,10 @@ function render(){
    +'<div class="m">📅 '+esc(o.date)+' '+esc(o.time)+' • 📞 '+esc(o.phone)+'</div>'
    +(o.address?'<div class="m">📍 '+esc(o.address)+'</div>':'')
    +'<div style="margin:6px 0">'+esc(o.items)+'</div>'
+   +(o.delivery_type=="توصيل"?'<div class="m">🚚 توصيل • رسوم '+n(o.delivery_fee)+' ج • الديلفري: '+esc(o.courier_name||"لسه مش محدد")+' '+esc(o.courier_phone)+'<br><b>المطلوب تحصيله: '+collect(o)+' ج</b></div>':'')
    +'<div class="row"><span class="b">'+n(o.total)+' ج</span><span class="m">مدفوع '+n(o.paid)+' • باقي '+rest+'</span></div>'
    +(o.notes?'<div class="m">📝 '+esc(o.notes)+'</div>':'')
-   +'<div class="acts"><button data-c="'+ix+'">اتصال / واتساب</button>'+(canW?'<button data-e="'+ix+'">تعديل</button>':'')+(canD?'<button data-d="'+ix+'">حذف</button>':'')+'</div></div>'});
+   +'<div class="acts"><button data-c="'+ix+'">اتصال / واتساب</button>'+(o.delivery_type=="توصيل"?'<button data-dl="'+ix+'">ابعت للديلفري</button>':'')+(canW?'<button data-e="'+ix+'">تعديل</button>':'')+(canD?'<button data-d="'+ix+'">حذف</button>':'')+'</div></div>'});
  }
  if(tab=="p"){
   var l2=buys.slice().sort(function(a,b){return(b.date||"").localeCompare(a.date||"")});
@@ -147,6 +155,7 @@ function render(){
  var f=$("#fl");if(f)f.onchange=function(){fl=f.value;render()};
  document.querySelectorAll("[data-e]").forEach(function(b){b.onclick=function(){formO(viewO[+b.dataset.e])}});
  document.querySelectorAll("[data-ep]").forEach(function(b){b.onclick=function(){formP(viewP[+b.dataset.ep])}});
+ document.querySelectorAll("[data-dl]").forEach(function(b){b.onclick=function(){dlSheet(viewO[+b.dataset.dl])}});
  document.querySelectorAll("[data-c]").forEach(function(b){b.onclick=function(){callSheet(viewO[+b.dataset.c])}});
  document.querySelectorAll("[data-d]").forEach(function(b){b.onclick=function(){del("o",(viewO[+b.dataset.d]||{}).id)}});
  document.querySelectorAll("[data-dp]").forEach(function(b){b.onclick=function(){del("p",(viewP[+b.dataset.dp]||{}).id)}});
@@ -172,14 +181,18 @@ function formO(obj){
  +fld("c","اسم الزبون",o.customer)+fld("ph","رقم التليفون",o.phone,"tel","01xxxxxxxxx")+fld("ad","العنوان / المنطقة",o.address)
  +'<label>الطلب (النوع × العدد)<textarea autocomplete="off" id="it" rows="2" placeholder="6 دونتس بنكهات مشكّلة">'+esc(o.items)+'</textarea></label>'
  +'<div class="g2">'+fld("d","تاريخ التسليم",o.date,"date")+fld("tm","الساعة",o.time,"time")+'</div>'
+ +'<label>طريقة الاستلام<select id="dt"><option '+(o.delivery_type!="توصيل"?"selected":"")+'>استلام</option><option '+(o.delivery_type=="توصيل"?"selected":"")+'>توصيل</option></select></label>'
+ +'<div id="dv" style="display:'+(o.delivery_type=="توصيل"?"grid":"none")+';gap:8px">'+fld("df","رسوم التوصيل (ج)",o.delivery_fee,"number")+fld("cn","اسم الديلفري",o.courier_name)+fld("cp2","تليفون الديلفري",o.courier_phone,"tel","01xxxxxxxxx")+'</div>'
  +'<div class="g2">'+fld("tt","الإجمالي (ج)",o.total,"number")+fld("pd","المدفوع (ج)",o.paid,"number")+'</div>'
  +'<label>الحالة<select id="st">'+ST.map(function(s){return'<option '+(o.status==s?"selected":"")+'>'+s+'</option>'}).join("")+'</select></label>'
  +fld("nt","ملاحظات",o.notes)
  +'<button class="btn">حفظ</button><button type="button" class="btn s" id="x">إلغاء</button></form>');
  $("#x").onclick=close;
+ $("#dt").onchange=function(){$("#dv").style.display=$("#dt").value=="توصيل"?"grid":"none"};
  $("#f").onsubmit=function(e){e.preventDefault();
+  if($("#dt").value=="توصيل"&&!$("#ad").value.trim()){toast("اكتب عنوان الزبون للتوصيل");return}
   if(!$("#c").value.trim()){toast("اكتب اسم الزبون");return}
-  put("o",{no:o.no,customer:$("#c").value.trim(),phone:$("#ph").value.trim(),address:$("#ad").value.trim(),items:$("#it").value.trim(),date:$("#d").value,time:$("#tm").value,total:n($("#tt").value),paid:n($("#pd").value),status:$("#st").value,notes:$("#nt").value.trim()},id);close()};
+  put("o",{no:o.no,customer:$("#c").value.trim(),phone:$("#ph").value.trim(),address:$("#ad").value.trim(),items:$("#it").value.trim(),date:$("#d").value,time:$("#tm").value,total:n($("#tt").value),paid:n($("#pd").value),status:$("#st").value,notes:$("#nt").value.trim(),delivery_type:$("#dt").value,delivery_fee:$("#dt").value=="توصيل"?n($("#df").value):0,courier_name:$("#dt").value=="توصيل"?$("#cn").value.trim():"",courier_phone:$("#dt").value=="توصيل"?$("#cp2").value.trim():""},id);close()};
 }
 function formP(obj){
  var x=obj||{date:today(),cat:"خامات"},id=obj&&obj.id;
@@ -212,8 +225,8 @@ function teamBind(){
 
 async function exportCsv(k){
  var rows,name;
- if(k=="o"){rows=[["رقم الأوردر","الزبون","التليفون","العنوان","الطلب","تاريخ التسليم","الساعة","الإجمالي","المدفوع","الباقي","الحالة","ملاحظات"]];
-  orders.slice().sort(function(a,b){return n(a.no)-n(b.no)}).forEach(function(o){rows.push(["SB-"+String(o.no||0).padStart(3,"0"),o.customer,"'"+(o.phone||""),o.address,o.items,o.date,o.time,n(o.total),n(o.paid),n(o.total)-n(o.paid),o.status,o.notes])});name="sugarboo-orders-"}
+ if(k=="o"){rows=[["رقم الأوردر","الزبون","التليفون","العنوان","الطلب","تاريخ التسليم","الساعة","الإجمالي","المدفوع","الباقي","الحالة","ملاحظات","الاستلام","رسوم التوصيل","الديلفري","تليفون الديلفري"]];
+  orders.slice().sort(function(a,b){return n(a.no)-n(b.no)}).forEach(function(o){rows.push(["SB-"+String(o.no||0).padStart(3,"0"),o.customer,"'"+(o.phone||""),o.address,o.items,o.date,o.time,n(o.total),n(o.paid),n(o.total)-n(o.paid),o.status,o.notes,o.delivery_type,n(o.delivery_fee),o.courier_name,"'"+(o.courier_phone||"")])});name="sugarboo-orders-"}
  else{rows=[["التاريخ","الصنف","الكمية","السعر","النوع","المورّد"]];
   buys.slice().sort(function(a,b){return(a.date||"").localeCompare(b.date||"")}).forEach(function(x){rows.push([x.date,x.item,x.qty,n(x.price),x.cat,x.supplier])});name="sugarboo-purchases-"}
  var data="\uFEFF"+csv(rows);
